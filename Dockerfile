@@ -1,35 +1,28 @@
-# ==========================================
-# Stage 1: Build the React Application
-# ==========================================
-FROM node:20-alpine AS build
+# Use Node.js Alpine base image
+FROM node:20-alpine
 
 WORKDIR /app
 
 # Copy package descriptors first to leverage Docker layer caching
 COPY package*.json ./
+
+# Install all dependencies (production & development required for bundling)
 RUN npm ci
 
 # Copy the rest of the application files
 COPY . .
 
-# Build production distribution assets
+# Build production assets (Vite frontend + esbuild server backend)
 RUN npm run build
 
-# ==========================================
-# Stage 2: Serve the Built Static Assets
-# ==========================================
-FROM nginx:stable-alpine
+# Set production environment
+ENV NODE_ENV=production
 
-# Remove default Nginx welcome page
-RUN rm -rf /usr/share/nginx/html/*
+# Expose Express backend port (serves both API and frontend static assets)
+EXPOSE 3000
 
-# Copy built distribution assets from the build stage
-COPY --from=build /app/dist /usr/share/nginx/html
+# Declare persistent volume mount point
+VOLUME ["/app/data"]
 
-# Copy the customized Nginx routing configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Expose HTTP port 80
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+# Start the compiled self-contained production backend server
+CMD ["node", "dist/server.cjs"]

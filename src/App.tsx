@@ -31,64 +31,121 @@ export default function App() {
     isGoalAchieved: false,
   });
 
-  // 1. Load state from LocalStorage on mount
+  // 1. Load state from server (with localStorage migration fallback) on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as AppState;
+    async function fetchState() {
+      try {
+        const response = await fetch('/api/state');
+        const result = await response.json();
         
-        // Migrate habits to ensure they all have points
-        if (parsed.habits) {
-          parsed.habits = parsed.habits.map(h => ({
-            ...h,
-            points: typeof h.points === 'number' ? h.points : 10
-          }));
+        let stateToUse: AppState | null = null;
+        
+        if (result.success && result.state && result.state.isInitialized) {
+          stateToUse = result.state;
+        } else {
+          // If server state is not initialized, check for legacy localStorage data to migrate
+          const legacyStored = localStorage.getItem(LOCAL_STORAGE_KEY);
+          if (legacyStored) {
+            try {
+              const legacyParsed = JSON.parse(legacyStored) as AppState;
+              if (legacyParsed.isInitialized) {
+                console.log('Migrating legacy localStorage state to server...');
+                stateToUse = legacyParsed;
+                // Save it to the server so it is persisted permanently
+                await fetch('/api/state', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ state: legacyParsed }),
+                });
+              }
+            } catch (err) {
+              console.error('Failed to parse legacy state:', err);
+            }
+          }
         }
 
-        // Migrate rewards list if missing
-        if (!parsed.rewards) {
-          parsed.rewards = [
-            { id: 'reward_1', name: '看一集喜欢的动画片 📺', pointsRequired: 50, createdAt: Date.now() },
-            { id: 'reward_2', name: '吃一次美味冰淇淋 🍦', pointsRequired: 80, createdAt: Date.now() + 1 },
-            { id: 'reward_3', name: '买一个精美小玩具 🧸', pointsRequired: 150, createdAt: Date.now() + 2 },
-            { id: 'reward_4', name: '去游乐园玩大冒险 🎡', pointsRequired: 300, createdAt: Date.now() + 3 },
-            { id: 'reward_5', name: '延长30分钟游戏时间 🎮', pointsRequired: 60, createdAt: Date.now() + 4 },
-          ];
-        }
+        if (stateToUse) {
+          // Migrate habits to ensure they all have points
+          if (stateToUse.habits) {
+            stateToUse.habits = stateToUse.habits.map(h => ({
+              ...h,
+              points: typeof h.points === 'number' ? h.points : 10
+            }));
+          }
 
-        if (!parsed.redemptions) {
-          parsed.redemptions = [];
-        }
+          // Migrate rewards list if missing
+          if (!stateToUse.rewards || stateToUse.rewards.length === 0) {
+            stateToUse.rewards = [
+              { id: 'reward_1', name: '看一集喜欢的动画片 📺', pointsRequired: 50, createdAt: Date.now() },
+              { id: 'reward_2', name: '吃一次美味冰淇淋 🍦', pointsRequired: 80, createdAt: Date.now() + 1 },
+              { id: 'reward_3', name: '买一个精美小玩具 🧸', pointsRequired: 150, createdAt: Date.now() + 2 },
+              { id: 'reward_4', name: '去游乐园玩大冒险 🎡', pointsRequired: 300, createdAt: Date.now() + 3 },
+              { id: 'reward_5', name: '延长30分钟游戏时间 🎮', pointsRequired: 60, createdAt: Date.now() + 4 },
+            ];
+          }
 
-        setAppState(parsed);
-      } else {
-        // First time initialization required
-        setAppState({
-          children: [],
-          activeChildId: null,
-          habits: [],
-          logs: [],
-          parentPasswordHash: '',
-          isInitialized: false,
-          rewards: [],
-          redemptions: [],
-        });
+          if (!stateToUse.redemptions) {
+            stateToUse.redemptions = [];
+          }
+
+          setAppState(stateToUse);
+        } else {
+          // First time initialization required
+          setAppState({
+            children: [],
+            activeChildId: null,
+            habits: [],
+            logs: [],
+            parentPasswordHash: '',
+            isInitialized: false,
+            rewards: [],
+            redemptions: [],
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load application state from server:', e);
+        // Absolute fallback to localStorage if server is down
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (stored) {
+          try {
+            setAppState(JSON.parse(stored));
+          } catch {
+            // ignore
+          }
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e) {
-      console.error('Failed to load application state:', e);
-    } finally {
-      setIsLoading(false);
     }
+
+    fetchState();
   }, []);
 
-  // 2. Persist state to LocalStorage whenever it changes
-  const updateState = (newState: AppState) => {
+  // 2. Persist state to Server (and backup to LocalStorage) whenever it changes
+  const updateState = async (newState: AppState) => {
+    // Optimistic UI update
     setAppState(newState);
+    
+    // Save to server
+    try {
+      const response = await fetch('/api/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: newState }),
+      });
+      const result = await response.json();
+      if (!result.success) {
+        console.error('Server failed to persist state:', result.error);
+      }
+    } catch (e) {
+      console.error('Failed to save state to server:', e);
+    }
+
+    // Also write to local storage as backup
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newState));
     } catch (e) {
-      console.error('Failed to save application state:', e);
+      console.error('Failed to save application state backup:', e);
     }
   };
 

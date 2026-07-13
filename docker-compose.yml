@@ -7,7 +7,9 @@ services:
       dockerfile: Dockerfile
     container_name: child-habit-tracker-app
     ports:
-      - "3789:80"
+      - "3789:3000"
+    volumes:
+      - ./data:/app/data
     restart: always
     environment:
       - NODE_ENV=production
