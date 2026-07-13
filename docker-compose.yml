@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  habit-tracker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: child-habit-tracker-app
+    ports:
+      - "3789:80"
+    restart: always
+    environment:
+      - NODE_ENV=production

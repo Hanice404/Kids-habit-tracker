@@ -1,0 +1,8 @@
+{
+  "name": "儿童行为节律管理器",
+  "description": "A delightful, child-friendly habit tracker for kids with a password-protected parent control panel, customizable habit goals, and rewarding SVG animations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
