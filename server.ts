@@ -4,15 +4,35 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // Path to persistent data storage
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "state.json");
 
-// Ensure data directory exists
+// Ensure data directory and default state file exist
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+const defaultState = {
+  children: [],
+  activeChildId: null,
+  habits: [],
+  logs: [],
+  parentPasswordHash: "",
+  isInitialized: false,
+  rewards: [],
+  redemptions: [],
+};
+
+if (!fs.existsSync(DATA_FILE)) {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(defaultState, null, 2), "utf-8");
+    console.log("Initialized default state.json file successfully.");
+  } catch (err) {
+    console.error("Failed to write default state.json file:", err);
+  }
 }
 
 // Enable rich JSON body parser with increased limit to support potential Base64 images

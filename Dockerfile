@@ -17,9 +17,10 @@ RUN npm run build
 
 # Set production environment
 ENV NODE_ENV=production
+ENV PORT=80
 
 # Expose Express backend port (serves both API and frontend static assets)
-EXPOSE 3000
+EXPOSE 80
 
 # Declare persistent volume mount point
 VOLUME ["/app/data"]

@@ -5,9 +5,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: child-habit-tracker-app
+    container_name: Kids-habit-tracker
     ports:
-      - "3789:3000"
+      - "3789:80"
     volumes:
       - ./data:/app/data
     restart: always
