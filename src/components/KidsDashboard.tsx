@@ -214,7 +214,7 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
               className="relative cursor-pointer"
             >
               <div className="w-16 h-16 rounded-full border-2 border-rose-300 overflow-hidden shadow-md">
-                {renderAvatar(activeChild.avatarId, 'w-full h-full bg-slate-50')}
+                {renderAvatar(activeChild.avatarId, 'w-full h-full bg-slate-50', activeChild.avatarUrl)}
               </div>
               <div className="absolute -bottom-1 -right-1 bg-rose-400 text-white rounded-full p-1 border border-white">
                 <RotateCcw className="w-3 h-3" />
@@ -258,7 +258,7 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
               className="px-4 py-2.5 bg-gradient-to-r from-amber-400 via-rose-400 to-rose-500 hover:opacity-90 text-white font-extrabold text-sm flex items-center gap-2 rounded-2xl shadow-sm transition active:scale-95 min-h-[44px]"
             >
               <Gift className="w-4.5 h-4.5 text-white animate-bounce" />
-              <span>奖励兑换 ({currentAvailablePoints} 分)</span>
+              <span>奖励兑换</span>
             </button>
 
             {/* Parent Entry Button (Touch targets > 44px) */}
@@ -301,7 +301,7 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
                       }`}
                     >
                       <div className="w-10 h-10 rounded-full overflow-hidden">
-                        {renderAvatar(child.avatarId, 'w-full h-full')}
+                        {renderAvatar(child.avatarId, 'w-full h-full', child.avatarUrl)}
                       </div>
                       <span className="font-bold text-sm text-slate-700">{child.name}</span>
                       {activeChild.id === child.id && (
@@ -647,7 +647,7 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
                   <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-2xl p-4 flex items-center justify-between shadow-xs">
                     <div className="flex items-center gap-3">
                       <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white shadow-sm">
-                        {renderAvatar(activeChild.avatarId, 'w-full h-full')}
+                        {renderAvatar(activeChild.avatarId, 'w-full h-full', activeChild.avatarUrl)}
                       </div>
                       <div>
                         <h4 className="font-bold text-sm text-slate-800">{activeChild.name}</h4>

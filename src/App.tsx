@@ -189,6 +189,7 @@ export default function App() {
           isOpen={celebration.isOpen}
           childName={activeChild.name}
           avatarId={activeChild.avatarId}
+          avatarUrl={activeChild.avatarUrl}
           habitName={celebration.habitName}
           isGoalAchieved={celebration.isGoalAchieved}
           onClose={() => setCelebration(prev => ({ ...prev, isOpen: false }))}

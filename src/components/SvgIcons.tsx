@@ -216,7 +216,17 @@ export const DolphinAvatar: React.FC<{ className?: string }> = ({ className = 'w
 );
 
 // Helper function to render avatar by ID
-export const renderAvatar = (avatarId: string, className = 'w-16 h-16') => {
+export const renderAvatar = (avatarId: string, className = 'w-16 h-16', avatarUrl?: string) => {
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt="avatar"
+        className={`${className} object-cover rounded-full border border-slate-100 shadow-sm`}
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
   switch (avatarId) {
     case 'babyshark':
       return <BabySharkAvatar className={className} />;

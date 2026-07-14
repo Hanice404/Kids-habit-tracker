@@ -8,6 +8,7 @@ interface SuccessCelebrationProps {
   isOpen: boolean;
   childName: string;
   avatarId: string;
+  avatarUrl?: string;
   habitName: string;
   isGoalAchieved: boolean; // True if hitting the totalGoal count with this punch-in
   onClose: () => void;
@@ -45,6 +46,7 @@ export const SuccessCelebration: React.FC<SuccessCelebrationProps> = ({
   isOpen,
   childName,
   avatarId,
+  avatarUrl,
   habitName,
   isGoalAchieved,
   onClose,
@@ -158,7 +160,7 @@ export const SuccessCelebration: React.FC<SuccessCelebrationProps> = ({
               transition={{ type: 'spring', delay: 0.2 }}
               className="w-24 h-24 z-10"
             >
-              {renderAvatar(avatarId, 'w-full h-full shadow-lg rounded-full')}
+              {renderAvatar(avatarId, 'w-full h-full shadow-lg rounded-full', avatarUrl)}
             </motion.div>
 
             {/* Glowing gold badge overlapping slightly */}

@@ -113,7 +113,56 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
   const [editingChildId, setEditingChildId] = useState<string | null>(null);
   const [childName, setChildName] = useState('');
   const [childAvatarId, setChildAvatarId] = useState('babyshark');
+  const [childAvatarUrl, setChildAvatarUrl] = useState<string | undefined>(undefined);
+  const [isDraggingChildAvatar, setIsDraggingChildAvatar] = useState(false);
   const [childError, setChildError] = useState('');
+
+  const processChildAvatarFile = (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setChildError('请上传有效的图片文件哦 📸');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      setChildError('图片文件太大啦，不能超过 10MB 哦！');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        setChildAvatarUrl(e.target.result as string);
+        setChildError('');
+      }
+    };
+    reader.onerror = () => {
+      setChildError('读取图片文件失败，请重试');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleChildAvatarDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingChildAvatar(true);
+  };
+
+  const handleChildAvatarDragLeave = () => {
+    setIsDraggingChildAvatar(false);
+  };
+
+  const handleChildAvatarDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingChildAvatar(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processChildAvatarFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleChildAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      processChildAvatarFile(e.target.files[0]);
+    }
+  };
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -316,6 +365,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
         ...c,
         name: childName.trim(),
         avatarId: childAvatarId,
+        avatarUrl: childAvatarUrl,
       } : c);
     } else {
       // Add child
@@ -324,6 +374,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
         id: childId,
         name: childName.trim(),
         avatarId: childAvatarId,
+        avatarUrl: childAvatarUrl,
       };
       updatedChildren.push(newChild);
       if (!activeId) activeId = childId;
@@ -343,6 +394,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
     setEditingChildId(child.id);
     setChildName(child.name);
     setChildAvatarId(child.avatarId);
+    setChildAvatarUrl(child.avatarUrl);
     setChildError('');
   };
 
@@ -405,6 +457,8 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
     setEditingChildId(null);
     setChildName('');
     setChildAvatarId('babyshark');
+    setChildAvatarUrl(undefined);
+    setIsDraggingChildAvatar(false);
     setChildError('');
   };
 
@@ -1075,6 +1129,63 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
                   </div>
                 </div>
 
+                {/* Custom Avatar Uploading option */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+                    自定义宝贝头像照片 (可选)
+                  </label>
+                  <div
+                    onDragOver={handleChildAvatarDragOver}
+                    onDragLeave={handleChildAvatarDragLeave}
+                    onDrop={handleChildAvatarDrop}
+                    className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                      isDraggingChildAvatar
+                        ? 'border-rose-400 bg-rose-50/50'
+                        : childAvatarUrl
+                        ? 'border-indigo-400 bg-indigo-50/10'
+                        : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      id="childAvatarUploadInput"
+                      accept="image/*"
+                      onChange={handleChildAvatarChange}
+                      className="hidden"
+                    />
+                    <label htmlFor="childAvatarUploadInput" className="cursor-pointer block">
+                      {childAvatarUrl ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <img
+                            src={childAvatarUrl}
+                            alt="预览头像"
+                            className="w-16 h-16 rounded-full object-cover border-2 border-indigo-400 shadow-sm"
+                            referrerPolicy="no-referrer"
+                          />
+                          <span className="text-xs text-indigo-600 font-bold">已上传自定义照片 (点击更换) 📸</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              playClickSound();
+                              setChildAvatarUrl(undefined);
+                            }}
+                            className="text-[10px] text-rose-500 hover:underline font-bold"
+                          >
+                            清除，改用卡通形象
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-1 py-1">
+                          <p className="text-xs text-slate-500 font-bold">拖动宝贝照片到这里，或 <span className="text-rose-500 underline">点击上传</span></p>
+                          <p className="text-[10px] text-slate-400">支持 JPG/PNG 等常见图片，自动裁剪</p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                </div>
+
                 <div className="flex gap-2 pt-2">
                   {editingChildId && (
                     <button
@@ -1123,7 +1234,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className="w-12 h-12 flex-shrink-0">
-                          {renderAvatar(child.avatarId, 'w-full h-full shadow-sm rounded-full')}
+                          {renderAvatar(child.avatarId, 'w-full h-full shadow-sm rounded-full', child.avatarUrl)}
                         </div>
                         <div className="text-left overflow-hidden">
                           <h4 className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
@@ -1229,7 +1340,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
                         <tr key={log.id} className="hover:bg-slate-50/50 transition">
                           <td className="py-3.5 px-4 flex items-center gap-2">
                             <div className="w-6 h-6">
-                              {child ? renderAvatar(child.avatarId, 'w-full h-full rounded-full') : <span className="text-slate-300">已删</span>}
+                              {child ? renderAvatar(child.avatarId, 'w-full h-full rounded-full', child.avatarUrl) : <span className="text-slate-300">已删</span>}
                             </div>
                             <span className="font-bold text-slate-700">{child?.name || '未知宝贝'}</span>
                           </td>

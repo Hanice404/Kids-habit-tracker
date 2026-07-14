@@ -2,6 +2,7 @@ export interface Child {
   id: string;
   name: string;
   avatarId: string; // 'babyshark' | 'superjett' | 'cosmictiger' | 'spacebunny' | 'dolphin'
+  avatarUrl?: string; // Custom uploaded base64 avatar image URL
 }
 
 export type HabitCategory = 'hygiene' | 'sleep' | 'eating' | 'learning' | 'sports' | 'custom';
