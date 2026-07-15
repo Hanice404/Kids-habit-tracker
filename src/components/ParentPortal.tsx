@@ -52,6 +52,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
   const [rewardPointsRequired, setRewardPointsRequired] = useState(50);
   const [rewardImageUrl, setRewardImageUrl] = useState('');
   const [isDraggingRewardIcon, setIsDraggingRewardIcon] = useState(false);
+  const [isUploadingRewardIcon, setIsUploadingRewardIcon] = useState(false);
   const [rewardError, setRewardError] = useState('');
 
   // Custom iframe-friendly confirm and alert states
@@ -74,10 +75,29 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       if (e.target?.result) {
-        setRewardImageUrl(e.target.result as string);
+        const base64Data = e.target.result as string;
+        setIsUploadingRewardIcon(true);
         setRewardError('');
+        try {
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64Data, name: file.name }),
+          });
+          const result = await response.json();
+          if (result.success && result.url) {
+            setRewardImageUrl(result.url);
+          } else {
+            setRewardError(result.error || '图片上传至服务器失败');
+          }
+        } catch (err) {
+          console.error(err);
+          setRewardError('图片上传出错，请检查网络');
+        } finally {
+          setIsUploadingRewardIcon(false);
+        }
       }
     };
     reader.onerror = () => {
@@ -115,6 +135,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
   const [childAvatarId, setChildAvatarId] = useState('babyshark');
   const [childAvatarUrl, setChildAvatarUrl] = useState<string | undefined>(undefined);
   const [isDraggingChildAvatar, setIsDraggingChildAvatar] = useState(false);
+  const [isUploadingChildAvatar, setIsUploadingChildAvatar] = useState(false);
   const [childError, setChildError] = useState('');
 
   const processChildAvatarFile = (file: File) => {
@@ -129,10 +150,29 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       if (e.target?.result) {
-        setChildAvatarUrl(e.target.result as string);
+        const base64Data = e.target.result as string;
+        setIsUploadingChildAvatar(true);
         setChildError('');
+        try {
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64Data, name: file.name }),
+          });
+          const result = await response.json();
+          if (result.success && result.url) {
+            setChildAvatarUrl(result.url);
+          } else {
+            setChildError(result.error || '图片上传至服务器失败');
+          }
+        } catch (err) {
+          console.error(err);
+          setChildError('图片上传出错，请检查网络');
+        } finally {
+          setIsUploadingChildAvatar(false);
+        }
       }
     };
     reader.onerror = () => {
@@ -929,7 +969,12 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
                       onChange={handleRewardIconChange}
                     />
                     
-                    {rewardImageUrl ? (
+                    {isUploadingRewardIcon ? (
+                      <div className="flex flex-col items-center gap-2 py-2">
+                        <div className="w-8 h-8 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-xs text-indigo-500 font-bold">正在上传图片至服务器... ☁️</span>
+                      </div>
+                    ) : rewardImageUrl ? (
                       <div className="flex items-center gap-3.5 w-full justify-start text-left">
                         <div className="w-14 h-14 rounded-2xl border border-slate-200 overflow-hidden flex-shrink-0 bg-white shadow-xs">
                           <img 
@@ -1154,34 +1199,39 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ appState, onUpdateSt
                       className="hidden"
                     />
                     <label htmlFor="childAvatarUploadInput" className="cursor-pointer block">
-                      {childAvatarUrl ? (
-                        <div className="flex flex-col items-center gap-2">
-                          <img
-                            src={childAvatarUrl}
-                            alt="预览头像"
-                            className="w-16 h-16 rounded-full object-cover border-2 border-indigo-400 shadow-sm"
-                            referrerPolicy="no-referrer"
-                          />
-                          <span className="text-xs text-indigo-600 font-bold">已上传自定义照片 (点击更换) 📸</span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              playClickSound();
-                              setChildAvatarUrl(undefined);
-                            }}
-                            className="text-[10px] text-rose-500 hover:underline font-bold"
-                          >
-                            清除，改用卡通形象
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-1 py-1">
-                          <p className="text-xs text-slate-500 font-bold">拖动宝贝照片到这里，或 <span className="text-rose-500 underline">点击上传</span></p>
-                          <p className="text-[10px] text-slate-400">支持 JPG/PNG 等常见图片，自动裁剪</p>
-                        </div>
-                      )}
+                    {isUploadingChildAvatar ? (
+                      <div className="flex flex-col items-center gap-2 py-2">
+                        <div className="w-8 h-8 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-xs text-indigo-500 font-bold">正在上传图片至服务器... ☁️</span>
+                      </div>
+                    ) : childAvatarUrl ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <img
+                          src={childAvatarUrl}
+                          alt="预览头像"
+                          className="w-16 h-16 rounded-full object-cover border-2 border-indigo-400 shadow-sm"
+                          referrerPolicy="no-referrer"
+                        />
+                        <span className="text-xs text-indigo-600 font-bold">已上传自定义照片 (点击更换) 📸</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            playClickSound();
+                            setChildAvatarUrl(undefined);
+                          }}
+                          className="text-[10px] text-rose-500 hover:underline font-bold"
+                        >
+                          清除，改用卡通形象
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-1 py-1">
+                        <p className="text-xs text-slate-500 font-bold">拖动宝贝照片到这里，或 <span className="text-rose-500 underline">点击上传</span></p>
+                        <p className="text-[10px] text-slate-400">支持 JPG/PNG 等常见图片，自动裁剪</p>
+                      </div>
+                    )}
                     </label>
                   </div>
                 </div>
