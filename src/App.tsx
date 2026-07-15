@@ -233,18 +233,11 @@ export default function App() {
       </div>
 
       {/* Shared Footer containing visual credits (Hiding internal paths, purely polished) */}
-      <footer className="py-6 border-t border-slate-200/40 bg-white/40 backdrop-blur-sm text-center text-xs text-slate-400">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="py-6 border-t border-slate-200/40 bg-white/40 backdrop-blur-sm text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto px-6 text-center">
           <p className="font-medium text-slate-400">
             © 2026 宝贝习惯大冒险助手 • 让成长充满惊喜 ✨
           </p>
-          <div className="flex gap-4 font-semibold text-slate-400/80">
-            <span>卡通手绘矢量 SVG 技术</span>
-            <span>•</span>
-            <span>Web Audio 趣味声效合成</span>
-            <span>•</span>
-            <span>家长密码保险箱</span>
-          </div>
         </div>
       </footer>
     </div>
