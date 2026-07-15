@@ -2,10 +2,11 @@ version: '3.8'
 
 services:
   habit-tracker:
+    image: kids-habit-tracker
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: Kids-habit-tracker
+    container_name: kids-habit-tracker
     ports:
       - "3789:80"
     volumes:
