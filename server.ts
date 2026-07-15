@@ -9,7 +9,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 // Path to persistent data storage
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "state.json");
-const IMAGES_DIR = path.join(process.cwd(), "images");
+const IMAGES_DIR = path.join(DATA_DIR, "images");
 
 // Ensure data and images directories exist
 if (!fs.existsSync(DATA_DIR)) {
