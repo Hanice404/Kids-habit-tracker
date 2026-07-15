@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AppState, Child, Habit, PunchInLog } from '../types';
+import { AppState, Child, Habit, PunchInLog, Reward } from '../types';
 import { renderAvatar, renderHabitIcon } from './SvgIcons';
 import { playClickSound, playBubbleSound } from './AudioSynthesizer';
 import { 
@@ -36,6 +36,7 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
   // Zoom preview image states
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [previewImageName, setPreviewImageName] = useState<string>('');
+  const [selectedRewardForDetail, setSelectedRewardForDetail] = useState<Reward | null>(null);
 
   // Helper: Get child total earned points
   const getChildEarnedPoints = (childId: string): number => {
@@ -445,22 +446,22 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
                     </div>
 
                     {/* Middle: Daily completion visual stars */}
-                    <div className="my-3 py-1.5 border-t border-b border-slate-200/30 flex items-center gap-2">
-                      <span className="text-[11px] font-bold text-slate-500">今日打卡：</span>
-                      <div className="flex gap-1.5">
+                    <div className="my-3 py-1.5 border-t border-b border-slate-200/30 flex items-center justify-between gap-1.5">
+                      <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap flex-shrink-0">今日打卡：</span>
+                      <div className="flex flex-wrap gap-1 items-center justify-start flex-1 min-w-0">
                         {Array.from({ length: habit.dailyFrequency }).map((_, i) => {
                           const isLit = i < completedToday;
                           return (
                             <Star
                               key={i}
-                              className={`w-4.5 h-4.5 transition ${
+                              className={`w-4 h-4 transition flex-shrink-0 ${
                                 isLit ? 'text-amber-400 fill-amber-400 filter drop-shadow-sm scale-110' : 'text-slate-300'
                               }`}
                             />
                           );
                         })}
                       </div>
-                      <span className="text-[10px] font-bold text-slate-400 ml-auto font-mono">
+                      <span className="text-[10px] font-bold text-slate-400 font-mono flex-shrink-0 ml-1">
                         {completedToday}/{habit.dailyFrequency}
                       </span>
                     </div>
@@ -695,20 +696,18 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
                           return (
                             <div
                               key={reward.id}
-                              className={`p-4 rounded-2xl border bg-white flex flex-col justify-between gap-3 shadow-xs transition hover:border-amber-200 ${
+                              onClick={() => {
+                                playClickSound();
+                                setSelectedRewardForDetail(reward);
+                              }}
+                              className={`p-4 rounded-2xl border bg-white flex flex-col justify-between gap-3 shadow-xs transition hover:border-amber-200 cursor-pointer hover:shadow-sm ${
                                 canRedeem ? 'border-slate-150' : 'border-slate-100 opacity-90'
                               }`}
                             >
                               <div className="flex items-start gap-3">
                                 {reward.imageUrl ? (
                                   <div 
-                                    onClick={() => {
-                                      playClickSound();
-                                      setPreviewImageUrl(reward.imageUrl || null);
-                                      setPreviewImageName(reward.name);
-                                    }}
-                                    className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-100 flex-shrink-0 shadow-xs bg-white cursor-zoom-in hover:scale-105 active:scale-95 transition-all duration-200"
-                                    title="点击放大预览"
+                                    className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-100 flex-shrink-0 shadow-xs bg-white"
                                   >
                                     <img 
                                       src={reward.imageUrl} 
@@ -729,7 +728,11 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
                               </div>
 
                               <button
-                                onClick={() => handleRedeemReward(reward)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  playClickSound();
+                                  handleRedeemReward(reward);
+                                }}
                                 className={`w-full py-2 rounded-xl text-xs font-extrabold transition-all transform active:scale-95 ${
                                   canRedeem
                                     ? 'bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white shadow-xs cursor-pointer'
@@ -899,6 +902,123 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
               </motion.div>
             </div>
           )}
+        </AnimatePresence>
+
+        {/* REWARD DETAIL VIEW MODAL */}
+        <AnimatePresence>
+          {selectedRewardForDetail && (() => {
+            const canRedeem = currentAvailablePoints >= selectedRewardForDetail.pointsRequired;
+            const progressRatio = Math.min(1, currentAvailablePoints / selectedRewardForDetail.pointsRequired);
+            const progressPercentage = Math.round(progressRatio * 100);
+
+            return (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setSelectedRewardForDetail(null)}
+                  className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+                />
+
+                {/* Floating card */}
+                <motion.div
+                  initial={{ y: 50, scale: 0.9, opacity: 0 }}
+                  animate={{ y: 0, scale: 1, opacity: 1 }}
+                  exit={{ y: 50, scale: 0.9, opacity: 0 }}
+                  className="bg-white rounded-[32px] shadow-2xl border border-slate-100 max-w-sm w-full p-6 relative overflow-hidden z-10 text-center"
+                >
+                  {/* Decorative background stars */}
+                  <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-amber-50 to-transparent -z-10" />
+
+                  {/* Close button */}
+                  <button
+                    onClick={() => {
+                      playClickSound();
+                      setSelectedRewardForDetail(null);
+                    }}
+                    className="absolute top-4 right-4 p-2 bg-slate-100/80 hover:bg-slate-200 text-slate-500 hover:text-slate-700 rounded-full transition active:scale-95"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+
+                  <div className="mt-3 flex flex-col items-center">
+                    {/* Reward Image or Emoji */}
+                    {selectedRewardForDetail.imageUrl ? (
+                      <div className="w-32 h-32 rounded-3xl overflow-hidden border-2 border-amber-200 shadow-md bg-white mb-4">
+                        <img
+                          src={selectedRewardForDetail.imageUrl}
+                          alt={selectedRewardForDetail.name}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-24 h-24 rounded-3xl bg-amber-50 border-2 border-amber-200 flex items-center justify-center text-5xl shadow-sm mb-4">
+                        🎁
+                      </div>
+                    )}
+
+                    <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-black mb-2">
+                      🏆 梦想礼物详情
+                    </span>
+
+                    <h4 className="text-xl font-black text-slate-800 mb-1 px-4 leading-snug">
+                      {selectedRewardForDetail.name}
+                    </h4>
+
+                    <p className="text-base font-extrabold text-amber-500 mb-4">
+                      兑换所需积分：{selectedRewardForDetail.pointsRequired} 分
+                    </p>
+
+                    {/* Progress representation */}
+                    <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6">
+                      <div className="flex justify-between items-center text-xs font-bold text-slate-500 mb-2">
+                        <span>{activeChild.name} 的当前积分:</span>
+                        <span className="text-slate-700 font-extrabold">{currentAvailablePoints} 分</span>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-full h-3 bg-slate-200/60 rounded-full overflow-hidden p-0.5 mb-2">
+                        <div
+                          style={{ width: `${progressPercentage}%` }}
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            canRedeem ? 'bg-gradient-to-r from-amber-400 to-orange-400' : 'bg-indigo-400'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
+                        <span>进度: {progressPercentage}%</span>
+                        <span>
+                          {canRedeem 
+                            ? '🎉 积分已足够，可以兑换啦！' 
+                            : `还差 ${selectedRewardForDetail.pointsRequired - currentAvailablePoints} 分`
+                          }
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action button */}
+                    <button
+                      onClick={() => {
+                        setSelectedRewardForDetail(null);
+                        handleRedeemReward(selectedRewardForDetail);
+                      }}
+                      className={`w-full py-3 rounded-2xl text-sm font-extrabold shadow-sm transition-all transform active:scale-95 ${
+                        canRedeem
+                          ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 hover:opacity-95 text-white cursor-pointer'
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed font-medium'
+                      }`}
+                    >
+                      {canRedeem ? '确认兑换此奖励 🎁' : `努力赚取积分中 (还差 ${selectedRewardForDetail.pointsRequired - currentAvailablePoints} 分)`}
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            );
+          })()}
         </AnimatePresence>
 
         {/* REWARD IMAGE ZOOM PREVIEW MODAL */}
