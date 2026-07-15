@@ -52,4 +52,5 @@ export interface AppState {
   isInitialized: boolean;
   rewards?: Reward[]; // NEW: reward configuration
   redemptions?: RewardRedemption[]; // NEW: reward redemption history
+  resets?: Record<string, number>; // Mapping of `${childId}_${habitId}` to reset timestamp
 }

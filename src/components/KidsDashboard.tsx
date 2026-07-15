@@ -26,6 +26,7 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
   
   // Modals visibility
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
+  const [habitToReset, setHabitToReset] = useState<Habit | null>(null);
   const [showParentAuth, setShowParentAuth] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
@@ -101,6 +102,33 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
     return appState.logs.filter(log => log.habitId === habitId && log.childId === activeChild.id && log.date === todayStr).length;
   };
 
+  // Helper: Get how many days a habit was fully completed (punch-ins >= dailyFrequency)
+  const getCompletedDaysCount = (habitId: string): number => {
+    if (!activeChild) return 0;
+    const habit = appState.habits.find(h => h.id === habitId);
+    if (!habit) return 0;
+    
+    // Filter logs that occurred after the reset timestamp
+    const resetKey = `${activeChild.id}_${habitId}`;
+    const resetTimestamp = appState.resets?.[resetKey] || 0;
+    
+    const habitLogs = appState.logs.filter(
+      log => log.habitId === habitId && log.childId === activeChild.id && log.timestamp > resetTimestamp
+    );
+    const dateCounts: Record<string, number> = {};
+    habitLogs.forEach(log => {
+      dateCounts[log.date] = (dateCounts[log.date] || 0) + 1;
+    });
+    
+    let completedDays = 0;
+    Object.keys(dateCounts).forEach(date => {
+      if (dateCounts[date] >= habit.dailyFrequency) {
+        completedDays++;
+      }
+    });
+    return completedDays;
+  };
+
   // Helper: Get total completed count for a habit
   const getTotalCompletedCount = (habitId: string): number => {
     return appState.logs.filter(log => log.habitId === habitId && log.childId === activeChild.id).length;
@@ -127,9 +155,10 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
       return;
     }
 
-    const totalCompleted = getTotalCompletedCount(habit.id);
-    const newTotal = totalCompleted + 1;
-    const isGoalAchieved = newTotal >= habit.goalValue;
+    const completedDays = getCompletedDaysCount(habit.id);
+    const willCompleteToday = (completedToday + 1) === habit.dailyFrequency;
+    const newCompletedDays = willCompleteToday ? completedDays + 1 : completedDays;
+    const isGoalAchieved = newCompletedDays >= habit.goalValue;
 
     // Create punch-in log
     const newLog: PunchInLog = {
@@ -396,12 +425,12 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {appState.habits.map((habit) => {
                 const completedToday = getTodayCompletedCount(habit.id);
-                const totalCompleted = getTotalCompletedCount(habit.id);
+                const completedDays = getCompletedDaysCount(habit.id);
                 const isFullyCompletedToday = completedToday >= habit.dailyFrequency;
-                const distanceToGoal = Math.max(0, habit.goalValue - totalCompleted);
+                const distanceToGoal = Math.max(0, habit.goalValue - completedDays);
 
                 // Percentage toward overall goal
-                const progressPercentage = Math.min(100, Math.round((totalCompleted / habit.goalValue) * 100));
+                const progressPercentage = Math.min(100, Math.round((completedDays / habit.goalValue) * 100));
 
                 return (
                   <motion.div
@@ -470,7 +499,7 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
                     <div>
                       <div className="flex justify-between items-center text-[11px] font-extrabold text-slate-500 mb-1">
                         <span>总进度累计:</span>
-                        <span className="font-mono text-slate-700">{totalCompleted} / {habit.goalValue}</span>
+                        <span className="font-mono text-slate-700">{completedDays} 天 / {habit.goalValue} 天</span>
                       </div>
 
                       {/* Micro progress gauge */}
@@ -481,9 +510,27 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
                         />
                       </div>
 
-                      <p className="text-[10px] text-slate-400 mt-1 text-right font-medium">
-                        {distanceToGoal > 0 ? `还差 ${distanceToGoal} 次即可达成终极勋章！` : '🎉 已达成终极目标！太棒了！'}
-                      </p>
+                      {/* Info & optional reset button below progress bar */}
+                      <div className="mt-1 flex justify-between items-center min-h-[22px]">
+                        <div className="flex-shrink-0">
+                          {completedDays >= habit.goalValue && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playClickSound();
+                                setHabitToReset(habit);
+                              }}
+                              className="px-2 py-0.5 bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] rounded-lg shadow-sm transition active:scale-95 flex items-center gap-0.5 z-10"
+                            >
+                              <RotateCcw className="w-2.5 h-2.5" />
+                              重新开始
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium text-right ml-2 truncate">
+                          {distanceToGoal > 0 ? `还差 ${distanceToGoal} 天即可达成终极勋章！` : '🎉 已达成终极目标！太棒了！'}
+                        </p>
+                      </div>
                     </div>
 
                   </motion.div>
@@ -497,9 +544,9 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
         <AnimatePresence>
           {selectedHabit && (() => {
             const completedToday = getTodayCompletedCount(selectedHabit.id);
+            const completedDays = getCompletedDaysCount(selectedHabit.id);
             const isFullyCompletedToday = completedToday >= selectedHabit.dailyFrequency;
-            const totalCompleted = getTotalCompletedCount(selectedHabit.id);
-            const progressPercentage = Math.min(100, Math.round((totalCompleted / selectedHabit.goalValue) * 100));
+            const progressPercentage = Math.min(100, Math.round((completedDays / selectedHabit.goalValue) * 100));
 
             return (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -597,12 +644,29 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
                   <div className="bg-slate-50 border border-slate-150 rounded-2xl p-3 text-left">
                     <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 mb-1">
                       <span>我的总大目标进度条：</span>
-                      <span>{totalCompleted} / {selectedHabit.goalValue} 天</span>
+                      <span>{completedDays} / {selectedHabit.goalValue} 天</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                       <div style={{ width: `${progressPercentage}%` }} className="h-full bg-rose-400" />
                     </div>
                   </div>
+
+                  {completedDays >= selectedHabit.goalValue && (
+                    <div className="mt-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playClickSound();
+                          setHabitToReset(selectedHabit);
+                          setSelectedHabit(null); // Close the detail modal
+                        }}
+                        className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-sm rounded-2xl shadow-md transition active:scale-95 flex items-center justify-center gap-1.5"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        重新开始大冒险
+                      </button>
+                    </div>
+                  )}
 
                 </motion.div>
               </div>
@@ -1068,6 +1132,74 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
                 <p className="text-[10px] text-slate-400 mt-3 text-center">
                   点击背景或右上角按钮即可关闭预览 🎈
                 </p>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* CUSTOM CONFIRMATION FOR HABIT RESTART (重新开始二次确认) */}
+        <AnimatePresence>
+          {habitToReset && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+                onClick={() => setHabitToReset(null)}
+              />
+              
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 15 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 15 }}
+                className="bg-white rounded-[32px] p-6 max-w-sm w-full shadow-2xl relative z-10 border border-slate-100 text-center flex flex-col items-center animate-fade-in"
+              >
+                {/* Thinking mascot icon */}
+                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center border border-amber-200/50 mb-4 text-3xl shadow-sm">
+                  🤔
+                </div>
+
+                <h3 className="text-lg font-black text-slate-800 mb-2">
+                  确定要重新开始大冒险吗？
+                </h3>
+                
+                <p className="text-xs text-slate-500 leading-relaxed mb-6">
+                  重新开始【<span className="font-bold text-indigo-600">{habitToReset.name}</span>】后，宝贝在这个习惯的<span className="font-extrabold text-amber-600">“总进度累计”将重置</span>。
+                  <br />
+                  <span className="text-[11px] block mt-2 text-emerald-600 font-bold">✨ 放心：积分、兑换礼物和今日已打卡记录都会保留！</span>
+                </p>
+
+                {/* Confirm & Cancel buttons */}
+                <div className="flex gap-3 w-full">
+                  <button
+                    onClick={() => {
+                      playClickSound();
+                      setHabitToReset(null);
+                    }}
+                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-extrabold text-sm rounded-2xl transition active:scale-95"
+                  >
+                    保留进度
+                  </button>
+                  <button
+                    onClick={() => {
+                      playBubbleSound();
+                      const key = `${activeChild.id}_${habitToReset.id}`;
+                      const updatedResets = {
+                        ...(appState.resets || {}),
+                        [key]: Date.now(),
+                      };
+                      onUpdateState({
+                        ...appState,
+                        resets: updatedResets,
+                      });
+                      setHabitToReset(null);
+                    }}
+                    className="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-sm rounded-2xl shadow-md transition active:scale-95"
+                  >
+                    确定重新开始
+                  </button>
+                </div>
               </motion.div>
             </div>
           )}
